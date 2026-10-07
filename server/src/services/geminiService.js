@@ -347,7 +347,7 @@ function buildAIStack(geminiLive, hasRag, hasMl) {
       role: 'Industrial fault pattern classification'
     },
     database: {
-      engine: 'MongoDB + Mongoose (auto-fallback to in-memory)',
+      engine: 'Firebase Cloud Firestore (auto-fallback to in-memory)',
       status: 'active',
       role: 'Investigation persistence and document chunk storage'
     },

@@ -1,54 +1,62 @@
-import mongoosePkg from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { getDBStatus } from '../config/db.js';
+import { getFirestore, getFirestoreStatus } from '../config/firestore.js';
 
-const { Schema, model } = mongoosePkg;
+const COLLECTION = 'users';
 
-const UserSchema = new Schema({
-  name: { type: String, required: true, trim: true },
-  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true, minlength: 6 },
-  role: { type: String, enum: ['technician', 'engineer', 'admin'], default: 'technician' },
-  organization: { type: String, default: 'FieldSense' },
-  lastLogin: { type: Date }
-}, { timestamps: true });
-
-// Hash password before save
-UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
-
-// Compare password
-UserSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
-};
-
-let UserModel;
-try {
-  UserModel = model('User', UserSchema);
-} catch (e) {
-  UserModel = mongoosePkg.model('User');
-}
-
-// =================== In-Memory User Store ===================
+// =================== In-Memory User Store (fallback) ===================
 const inMemoryUsers = new Map();
 
 export const UserRepo = {
   async create(data) {
-    const status = getDBStatus();
-    if (status.connected && UserModel) {
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashed = await bcrypt.hash(data.password, salt);
+
+    if (status.connected && db) {
       try {
-        const user = new UserModel(data);
-        return await user.save();
+        // Check email uniqueness
+        const existing = await db.collection(COLLECTION)
+          .where('email', '==', data.email.toLowerCase())
+          .limit(1)
+          .get();
+
+        if (!existing.empty) {
+          const err = new Error('Email already registered');
+          err.code = 11000;
+          throw err;
+        }
+
+        const id = uuidv4();
+        const now = new Date().toISOString();
+        const record = {
+          name: data.name,
+          email: data.email.toLowerCase(),
+          password: hashed,
+          role: data.role || 'technician',
+          organization: data.organization || 'FieldSense',
+          createdAt: now,
+          updatedAt: now
+        };
+
+        await db.collection(COLLECTION).doc(id).set(record);
+
+        return {
+          _id: id,
+          id: id,
+          ...record,
+          comparePassword: async (candidate) => bcrypt.compare(candidate, hashed)
+        };
       } catch (err) {
-        console.warn('[UserRepo] DB write error, falling back:', err.message);
+        if (err.code === 11000) throw err;
+        console.warn('[UserRepo] Firestore write error, falling back:', err.message);
       }
     }
-    // Check uniqueness
+
+    // In-memory fallback
     for (const u of inMemoryUsers.values()) {
       if (u.email === data.email.toLowerCase()) {
         const err = new Error('Email already registered');
@@ -57,8 +65,6 @@ export const UserRepo = {
       }
     }
     const id = uuidv4();
-    const salt = await bcrypt.genSalt(10);
-    const hashed = await bcrypt.hash(data.password, salt);
     const now = new Date();
     const record = {
       _id: id, id,
@@ -75,12 +81,33 @@ export const UserRepo = {
   },
 
   async findByEmail(email) {
-    const status = getDBStatus();
-    if (status.connected && UserModel) {
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (status.connected && db) {
       try {
-        return await UserModel.findOne({ email: email.toLowerCase() });
-      } catch (err) {}
+        const snapshot = await db.collection(COLLECTION)
+          .where('email', '==', email.toLowerCase())
+          .limit(1)
+          .get();
+
+        if (!snapshot.empty) {
+          const doc = snapshot.docs[0];
+          const data = doc.data();
+          return {
+            _id: doc.id,
+            id: doc.id,
+            ...data,
+            comparePassword: async (candidate) => bcrypt.compare(candidate, data.password)
+          };
+        }
+        return null;
+      } catch (err) {
+        console.warn('[UserRepo] Firestore findByEmail error:', err.message);
+      }
     }
+
+    // In-memory fallback
     for (const u of inMemoryUsers.values()) {
       if (u.email === email.toLowerCase()) return u;
     }
@@ -88,12 +115,25 @@ export const UserRepo = {
   },
 
   async findById(id) {
-    const status = getDBStatus();
-    if (status.connected && UserModel) {
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (status.connected && db) {
       try {
-        return await UserModel.findById(id).select('-password').lean();
-      } catch (err) {}
+        const doc = await db.collection(COLLECTION).doc(id).get();
+        if (doc.exists) {
+          const data = doc.data();
+          // Exclude password from the returned object
+          const { password, ...safe } = data;
+          return { _id: doc.id, id: doc.id, ...safe };
+        }
+        return null;
+      } catch (err) {
+        console.warn('[UserRepo] Firestore findById error:', err.message);
+      }
     }
+
+    // In-memory fallback
     const u = inMemoryUsers.get(id);
     if (u) {
       const { password, comparePassword, ...safe } = u;
@@ -103,4 +143,4 @@ export const UserRepo = {
   }
 };
 
-export default UserModel;
+export default UserRepo;

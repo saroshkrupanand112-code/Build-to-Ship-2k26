@@ -1,65 +1,36 @@
-import mongoosePkg from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { getDBStatus } from '../config/db.js';
+import { getFirestore, getFirestoreStatus } from '../config/firestore.js';
 
-const { Schema, model } = mongoosePkg;
+const DOCS_COLLECTION = 'documents';
+const CHUNKS_COLLECTION = 'documentChunks';
 
-// A DocumentChunk is a segment of an ingested document with embeddings
-const DocumentChunkSchema = new Schema({
-  documentId: { type: String, required: true, index: true },
-  documentName: { type: String, required: true },
-  chunkId: { type: String, default: () => uuidv4() },
-  chunkIndex: { type: Number, required: true },
-  text: { type: String, required: true },
-  pageNumber: { type: Number, default: 1 },
-  section: { type: String, default: '' },
-  sourceType: { type: String, default: 'pdf' },
-  uploadedAt: { type: Date, default: Date.now },
-  // Simple float array embedding (we store as numbers)
-  embedding: [{ type: Number }]
-}, { timestamps: true });
-
-// The parent Document record
-const DocumentRecordSchema = new Schema({
-  documentId: { type: String, default: () => uuidv4(), unique: true },
-  originalName: { type: String, required: true },
-  mimeType: { type: String },
-  sizeBytes: { type: Number },
-  status: {
-    type: String,
-    enum: ['UPLOADED', 'PROCESSING', 'INDEXING', 'READY', 'FAILED'],
-    default: 'UPLOADED'
-  },
-  chunkCount: { type: Number, default: 0 },
-  pageCount: { type: Number, default: 0 },
-  uploadedBy: { type: String },
-  filePath: { type: String }
-}, { timestamps: true });
-
-let ChunkModel, DocModel;
-try {
-  ChunkModel = model('DocumentChunk', DocumentChunkSchema);
-  DocModel = model('DocumentRecord', DocumentRecordSchema);
-} catch (e) {
-  try {
-    ChunkModel = mongoosePkg.model('DocumentChunk');
-    DocModel = mongoosePkg.model('DocumentRecord');
-  } catch (e2) {}
-}
-
-// =================== In-Memory stores ===================
+// =================== In-Memory stores (fallback) ===================
 const inMemoryDocs = new Map();
 const inMemoryChunks = new Map(); // docId -> chunks[]
 
 export const DocumentRepo = {
   async createDocument(data) {
-    const status = getDBStatus();
-    if (status.connected && DocModel) {
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (status.connected && db) {
       try {
-        const doc = new DocModel(data);
-        return (await doc.save()).toObject();
-      } catch (err) { console.warn('[DocRepo] DB error:', err.message); }
+        const id = data.documentId || uuidv4();
+        const now = new Date().toISOString();
+        const record = {
+          ...data,
+          documentId: id,
+          createdAt: now,
+          updatedAt: now
+        };
+        await db.collection(DOCS_COLLECTION).doc(id).set(record);
+        return { _id: id, ...record };
+      } catch (err) {
+        console.warn('[DocRepo] Firestore error:', err.message);
+      }
     }
+
+    // In-memory fallback
     const id = data.documentId || uuidv4();
     const record = { ...data, documentId: id, _id: id, createdAt: new Date(), updatedAt: new Date() };
     inMemoryDocs.set(id, record);
@@ -67,12 +38,24 @@ export const DocumentRepo = {
   },
 
   async updateDocumentStatus(documentId, status, extra = {}) {
-    const dbStatus = getDBStatus();
-    if (dbStatus.connected && DocModel) {
+    const dbStatus = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (dbStatus.connected && db) {
       try {
-        return await DocModel.findOneAndUpdate({ documentId }, { status, ...extra }, { new: true }).lean();
-      } catch (err) {}
+        const docRef = db.collection(DOCS_COLLECTION).doc(documentId);
+        const existing = await docRef.get();
+        if (existing.exists) {
+          const updateData = { status, ...extra, updatedAt: new Date().toISOString() };
+          await docRef.update(updateData);
+          return { ...existing.data(), ...updateData };
+        }
+      } catch (err) {
+        console.warn('[DocRepo] Firestore update error:', err.message);
+      }
     }
+
+    // In-memory fallback
     const existing = inMemoryDocs.get(documentId);
     if (existing) {
       const updated = { ...existing, status, ...extra, updatedAt: new Date() };
@@ -82,43 +65,97 @@ export const DocumentRepo = {
   },
 
   async findAllDocuments() {
-    const status = getDBStatus();
-    if (status.connected && DocModel) {
-      try { return await DocModel.find().sort({ createdAt: -1 }).lean(); } catch (err) {}
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (status.connected && db) {
+      try {
+        const snapshot = await db.collection(DOCS_COLLECTION)
+          .orderBy('createdAt', 'desc')
+          .get();
+        return snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+      } catch (err) {
+        console.warn('[DocRepo] Firestore findAll error:', err.message);
+      }
     }
+
     return Array.from(inMemoryDocs.values()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   },
 
   async storeChunks(documentId, chunks) {
-    const status = getDBStatus();
-    if (status.connected && ChunkModel) {
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (status.connected && db) {
       try {
-        await ChunkModel.deleteMany({ documentId });
-        const docs = chunks.map(c => new ChunkModel({ ...c, documentId }));
-        await ChunkModel.insertMany(docs);
+        // Delete existing chunks for this document
+        const existing = await db.collection(CHUNKS_COLLECTION)
+          .where('documentId', '==', documentId)
+          .get();
+
+        const batch = db.batch();
+        existing.docs.forEach(doc => batch.delete(doc.ref));
+
+        // Add new chunks
+        for (const c of chunks) {
+          const chunkId = c.chunkId || uuidv4();
+          const chunkRef = db.collection(CHUNKS_COLLECTION).doc(chunkId);
+          batch.set(chunkRef, {
+            ...c,
+            documentId,
+            chunkId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+        await batch.commit();
         return;
-      } catch (err) { console.warn('[DocRepo] Chunk insert error:', err.message); }
+      } catch (err) {
+        console.warn('[DocRepo] Firestore chunk store error:', err.message);
+      }
     }
+
+    // In-memory fallback
     inMemoryChunks.set(documentId, chunks.map(c => ({ ...c, documentId })));
   },
 
   async getAllChunksByDocId(documentId) {
-    const status = getDBStatus();
-    if (status.connected && ChunkModel) {
-      try { return await ChunkModel.find({ documentId }).lean(); } catch (err) {}
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (status.connected && db) {
+      try {
+        const snapshot = await db.collection(CHUNKS_COLLECTION)
+          .where('documentId', '==', documentId)
+          .get();
+        return snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+      } catch (err) {
+        console.warn('[DocRepo] Firestore chunk read error:', err.message);
+      }
     }
+
     return inMemoryChunks.get(documentId) || [];
   },
 
   async getAllChunks() {
-    const status = getDBStatus();
-    if (status.connected && ChunkModel) {
-      try { return await ChunkModel.find().lean(); } catch (err) {}
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (status.connected && db) {
+      try {
+        const snapshot = await db.collection(CHUNKS_COLLECTION).get();
+        return snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+      } catch (err) {
+        console.warn('[DocRepo] Firestore all chunks error:', err.message);
+      }
     }
+
     const all = [];
     for (const chunks of inMemoryChunks.values()) all.push(...chunks);
     return all;
   }
 };
 
-export { ChunkModel, DocModel };
+export default DocumentRepo;
+export { DocumentRepo as DocModel, DocumentRepo as ChunkModel };

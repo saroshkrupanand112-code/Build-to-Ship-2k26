@@ -1,98 +1,33 @@
-import mongoosePkg from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { getDBStatus } from '../config/db.js';
+import { getFirestore, getFirestoreStatus } from '../config/firestore.js';
 
-const { Schema, model } = mongoosePkg;
-
-const EvidenceMetadataSchema = new Schema({
-  id: { type: String, default: () => uuidv4() },
-  modality: { type: String, enum: ['text', 'image', 'audio', 'video', 'document'], required: true },
-  originalName: { type: String },
-  mimeType: { type: String },
-  size: { type: Number },
-  path: { type: String },
-  previewUrl: { type: String }
-}, { _id: false });
-
-const InvestigationSchema = new Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  scenario: { type: String, default: 'custom' },
-  evidenceMetadata: [EvidenceMetadataSchema],
-  aiResult: {
-    summary: { type: String, required: true },
-    primaryIssue: {
-      title: { type: String, required: true },
-      description: { type: String, required: true }
-    },
-    confidence: {
-      score: { type: Number, required: true },
-      label: { type: String, enum: ['Low', 'Medium', 'High'], required: true },
-      explanation: { type: String, required: true }
-    },
-    evidence: [{
-      id: { type: String },
-      modality: { type: String },
-      observation: { type: String },
-      type: { type: String, enum: ['supporting', 'contradicting', 'neutral'] },
-      impact: { type: String, enum: ['low', 'medium', 'high'] },
-      reason: { type: String }
-    }],
-    crossModalReasoning: [{
-      evidenceIds: [{ type: String }],
-      reasoning: { type: String }
-    }],
-    contradictions: [{
-      sources: [{ type: String }],
-      description: { type: String },
-      severity: { type: String, enum: ['low', 'medium', 'high'] }
-    }],
-    missingEvidence: [{
-      description: { type: String },
-      importance: { type: String, enum: ['low', 'medium', 'high'] }
-    }],
-    nextBestQuestion: {
-      question: { type: String },
-      reason: { type: String }
-    },
-    recommendations: [{
-      action: { type: String },
-      priority: { type: String, enum: ['low', 'medium', 'high'] },
-      reason: { type: String }
-    }],
-    safetyNote: { type: String },
-    report: { type: String }
-  },
-  confidenceScore: { type: Number },
-  confidenceLabel: { type: String },
-  contradictionsCount: { type: Number, default: 0 }
-}, {
-  timestamps: true
-});
-
-let MongooseModel;
-try {
-  MongooseModel = model('Investigation', InvestigationSchema);
-} catch (e) {
-  // If already compiled or mongoose not ready
-}
+const COLLECTION = 'investigations';
 
 // In-memory fallback repository for zero-dependency local runs
 const inMemoryStore = new Map();
 
 export const InvestigationRepo = {
   async create(data) {
-    const status = getDBStatus();
-    if (status.connected && MongooseModel) {
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (status.connected && db) {
       try {
-        const doc = new MongooseModel(data);
-        return await doc.save();
+        const id = uuidv4();
+        const now = new Date().toISOString();
+        const record = {
+          ...data,
+          createdAt: now,
+          updatedAt: now
+        };
+        await db.collection(COLLECTION).doc(id).set(record);
+        return { _id: id, id: id, ...record };
       } catch (err) {
-        console.warn('[Repo] Falling back to memory store on DB write error:', err.message);
+        console.warn('[InvestigationRepo] Firestore write error, falling back:', err.message);
       }
     }
 
-    // In-memory store
+    // In-memory fallback
     const id = uuidv4();
     const now = new Date();
     const record = {
@@ -107,12 +42,22 @@ export const InvestigationRepo = {
   },
 
   async findAll() {
-    const status = getDBStatus();
-    if (status.connected && MongooseModel) {
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (status.connected && db) {
       try {
-        return await MongooseModel.find().sort({ createdAt: -1 }).lean();
+        const snapshot = await db.collection(COLLECTION)
+          .orderBy('createdAt', 'desc')
+          .get();
+
+        return snapshot.docs.map(doc => ({
+          _id: doc.id,
+          id: doc.id,
+          ...doc.data()
+        }));
       } catch (err) {
-        console.warn('[Repo] Falling back to memory store on DB find error:', err.message);
+        console.warn('[InvestigationRepo] Firestore findAll error, falling back:', err.message);
       }
     }
 
@@ -122,11 +67,16 @@ export const InvestigationRepo = {
   },
 
   async findById(id) {
-    const status = getDBStatus();
-    if (status.connected && MongooseModel) {
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+
+    if (status.connected && db) {
       try {
-        const item = await MongooseModel.findById(id).lean();
-        if (item) return item;
+        const doc = await db.collection(COLLECTION).doc(id).get();
+        if (doc.exists) {
+          return { _id: doc.id, id: doc.id, ...doc.data() };
+        }
+        // Not found in Firestore — fall through to memory
       } catch (err) {
         // Continue to check in-memory
       }
@@ -136,18 +86,25 @@ export const InvestigationRepo = {
   },
 
   async deleteById(id) {
-    const status = getDBStatus();
-    if (status.connected && MongooseModel) {
+    const status = getFirestoreStatus();
+    const db = getFirestore();
+    let firestoreDeleted = false;
+
+    if (status.connected && db) {
       try {
-        await MongooseModel.findByIdAndDelete(id);
+        const doc = await db.collection(COLLECTION).doc(id).get();
+        if (doc.exists) {
+          await db.collection(COLLECTION).doc(id).delete();
+          firestoreDeleted = true;
+        }
       } catch (err) {
         // Continue to check in-memory
       }
     }
 
-    const existed = inMemoryStore.has(id);
+    const memoryExisted = inMemoryStore.has(id);
     inMemoryStore.delete(id);
-    return existed;
+    return firestoreDeleted || memoryExisted;
   },
 
   count() {
@@ -155,4 +112,4 @@ export const InvestigationRepo = {
   }
 };
 
-export default MongooseModel;
+export default InvestigationRepo;

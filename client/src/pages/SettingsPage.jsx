@@ -169,7 +169,7 @@ export default function SettingsPage() {
                   DATABASE &amp; STORAGE
                 </h3>
                 <p className="text-[11px] text-slate-400 font-mono">
-                  Mongoose Schema + In-Memory Fallback
+                  Cloud Firestore + In-Memory Fallback
                 </p>
               </div>
             </div>
@@ -182,12 +182,12 @@ export default function SettingsPage() {
           <div className="space-y-2 text-xs font-mono">
             <div className="flex justify-between p-2 rounded bg-surface-850 border border-surface-800">
               <span className="text-slate-400">Driver Mode:</span>
-              <span className="text-white font-bold">{health?.database?.storageType || 'Local Store Active'}</span>
+              <span className="text-white font-bold">{health?.database?.storageType || 'Cloud Firestore'}</span>
             </div>
             <div className="flex justify-between p-2 rounded bg-surface-850 border border-surface-800">
-              <span className="text-slate-400">MongoDB Connection:</span>
+              <span className="text-slate-400">Firestore Connection:</span>
               <span className={health?.database?.connected ? 'text-emerald-400' : 'text-amber-400'}>
-                {health?.database?.connected ? 'Connected to Replica/Cluster' : 'Fallback Active (Zero-Config)'}
+                {health?.database?.connected ? 'Connected to Cloud Firestore' : 'Fallback Active (Zero-Config)'}
               </span>
             </div>
             <div className="flex justify-between p-2 rounded bg-surface-850 border border-surface-800">
@@ -202,7 +202,7 @@ export default function SettingsPage() {
 
           <div className="p-3 rounded-xl bg-surface-950/80 border border-surface-800 text-[11px] text-slate-400 font-mono leading-relaxed">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 inline mr-1" />
-            FieldSense AI uses a dual-engine repository: it automatically binds to MongoDB via Mongoose when available, or seamlessly activates an in-memory repository so the app runs with zero external friction.
+            FieldSense AI uses a resilient repository: it automatically binds to Firebase Cloud Firestore when configured, or seamlessly activates an in-memory repository so the app runs with zero external friction.
           </div>
         </div>
 

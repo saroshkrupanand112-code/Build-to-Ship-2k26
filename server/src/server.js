@@ -2,14 +2,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import app from './app.js';
-import { connectDB } from './config/db.js';
+import { initFirestore } from './config/firestore.js';
 
 const PORT = process.env.PORT || 5000;
 
 // Initialize database and start server
 const startServer = async () => {
   try {
-    await connectDB();
+    await initFirestore();
 
     app.listen(PORT, () => {
       console.log(`====================================================`);

@@ -67,7 +67,7 @@ FieldSense AI treats every uploaded piece of media as **independent evidence**:
 │                      │                              │
 │  Tailwind CSS        │  Multer (file uploads)       │
 │  Lucide Icons        │  Zod (schema validation)     │
-│  Axios               │  Mongoose (MongoDB ORM)      │
+│  Axios               │  Firebase Admin SDK          │
 │  React Router        │  Google GenAI SDK            │
 │                      │  In-Memory Store Fallback    │
 └──────────────────────┴──────────────────────────────┘
@@ -79,8 +79,9 @@ FieldSense AI treats every uploaded piece of media as **independent evidence**:
                     └─────────────┘
                            │
                     ┌──────┴──────┐
-                    │  MongoDB    │
-                    │ (Optional)  │
+                    │ Firebase    │
+                    │ Cloud       │
+                    │ Firestore   │
                     └─────────────┘
 ```
 
@@ -91,7 +92,7 @@ FieldSense AI treats every uploaded piece of media as **independent evidence**:
 | Frontend | React 18, Vite 6, Tailwind CSS 3, React Router 6, Axios, Lucide React |
 | Backend | Node.js 24, Express 4, Multer, Zod, Morgan |
 | AI Engine | Google Gemini 1.5 Flash via `@google/genai` SDK |
-| Database | MongoDB + Mongoose (auto-fallback to in-memory store) |
+| Database | Firebase Cloud Firestore (auto-fallback to in-memory store) |
 | Dev Tools | Concurrently (root runner) |
 
 ## 📁 Folder Structure

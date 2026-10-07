@@ -3,7 +3,7 @@ import { retrieveRelevantChunks, buildRagContext } from '../services/ragService.
 import { classifyFaultEvidence, formatMLEvidenceEntry } from '../services/mlService.js';
 import { DEMO_SCENARIOS } from '../services/demoService.js';
 import { InvestigationRepo } from '../models/Investigation.js';
-import { getDBStatus } from '../config/db.js';
+import { getFirestoreStatus } from '../config/firestore.js';
 import { getAIStatus, setGeminiApiKey } from '../config/gemini.js';
 
 /**
@@ -205,7 +205,7 @@ export const updateApiKey = (req, res) => {
  * GET /api/health
  */
 export const getHealth = (req, res) => {
-  const dbStatus = getDBStatus();
+  const dbStatus = getFirestoreStatus();
   const aiStatus = getAIStatus();
 
   return res.status(200).json({
@@ -216,7 +216,7 @@ export const getHealth = (req, res) => {
     timestamp: new Date().toISOString(),
     database: {
       connected: dbStatus.connected,
-      storageType: dbStatus.fallbackMode ? 'In-Memory Storage' : 'MongoDB',
+      storageType: dbStatus.fallbackMode ? 'In-Memory Storage' : 'Cloud Firestore',
       driver: dbStatus.driver
     },
     ai: aiStatus,
