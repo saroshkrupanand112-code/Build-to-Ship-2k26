@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Activity, 
   Layers, 
@@ -8,13 +8,20 @@ import {
   ShieldCheck, 
   Sparkles, 
   AlertTriangle,
-  PlayCircle
+  PlayCircle,
+  User,
+  LogOut,
+  LogIn,
+  BookOpen
 } from 'lucide-react';
 import { getHealthApi } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar({ onLoadDemo }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [health, setHealth] = useState(null);
+  const { user, isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     getHealthApi()
@@ -88,7 +95,7 @@ export default function Navbar({ onLoadDemo }) {
             </Link>
           </nav>
 
-          {/* Quick Demos & Health Badge */}
+          {/* Quick Demos & Health Badge & User */}
           <div className="flex items-center gap-3">
             {onLoadDemo && (
               <div className="hidden lg:flex items-center gap-2 border-r border-surface-750 pr-3">
@@ -98,7 +105,7 @@ export default function Navbar({ onLoadDemo }) {
                   title="Scenario 1: Cross-modal corroboration"
                 >
                   <PlayCircle className="w-3.5 h-3.5 text-brand-400" />
-                  Demo: Belt Vibration
+                  Demo: Belt
                 </button>
                 <button
                   onClick={() => onLoadDemo('overheating')}
@@ -106,24 +113,49 @@ export default function Navbar({ onLoadDemo }) {
                   title="Scenario 2: Cross-modal contradiction detection"
                 >
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                  Demo: Thermal Conflict
+                  Demo: Thermal
                 </button>
               </div>
             )}
 
             {/* System Status Pill */}
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-900 border border-surface-750 text-xs">
+            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-900 border border-surface-750 text-xs">
               <span className={`w-2 h-2 rounded-full ${health?.status === 'healthy' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
               <span className="text-slate-300 font-mono text-[11px]">
-                {health?.ai?.configured ? 'Gemini Live' : 'Demo Engine'}
+                {health?.ai?.configured ? 'Gemini 1.5' : 'v2 Hybrid ML'}
               </span>
             </div>
 
+            {/* Auth Button or User Badge */}
+            {isAuthenticated && user ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-850 border border-surface-700 text-xs text-slate-200">
+                  <User className="w-3.5 h-3.5 text-brand-400" />
+                  <span className="font-semibold text-white max-w-[90px] truncate">{user.name}</span>
+                </div>
+                <button
+                  onClick={logout}
+                  title="Sign out"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-surface-800 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-800 hover:bg-surface-750 text-slate-200 border border-surface-700 hover:border-brand-500/40 flex items-center gap-1.5 transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5 text-brand-400" />
+                <span>Sign In</span>
+              </Link>
+            )}
+
             <Link
               to="/investigate"
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white shadow-md shadow-brand-600/30 transition-all"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white shadow-md shadow-brand-600/30 transition-all hidden sm:inline-flex"
             >
-              Start Investigation
+              Investigate
             </Link>
           </div>
 

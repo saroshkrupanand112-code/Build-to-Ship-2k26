@@ -6,6 +6,8 @@ import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
+import AuthPage from './pages/AuthPage';
+import { AuthProvider } from './context/AuthContext';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -19,7 +21,6 @@ function AppContent() {
   const handleNewInvestigation = () => {
     setActiveDemo(null);
     navigate('/investigate');
-    // window.location.reload() or reset
   };
 
   return (
@@ -39,6 +40,10 @@ function AppContent() {
               </main>
             } 
           />
+
+          {/* Auth Pages (Login & Register) */}
+          <Route path="/login" element={<AuthPage initialMode="login" />} />
+          <Route path="/register" element={<AuthPage initialMode="register" />} />
 
           {/* Workbench / Dashboard Page with Sidebar */}
           <Route 
@@ -93,7 +98,7 @@ function AppContent() {
       {/* Footer */}
       <footer className="border-t border-surface-800 bg-surface-950/90 py-6 text-center text-xs text-slate-500 font-mono">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>FIELDSENSE AI • Multimodal Evidence Intelligence Engine</span>
+          <span>FIELDSENSE AI v2.0 • Multimodal Evidence Intelligence Engine</span>
           <span>"See it. Hear it. Understand it. Cross-check it."</span>
         </div>
       </footer>
@@ -104,7 +109,9 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

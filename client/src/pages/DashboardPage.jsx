@@ -24,6 +24,8 @@ import ContradictionPanel from '../components/ContradictionPanel';
 import NextBestQuestion from '../components/NextBestQuestion';
 import RecommendationCard from '../components/RecommendationCard';
 import InvestigationReportModal from '../components/InvestigationReportModal';
+import RAGKnowledgePanel from '../components/RAGKnowledgePanel';
+import AIArchitecturePanel from '../components/AIArchitecturePanel';
 import { analyzeIncidentApi, saveInvestigationApi, getDemoPresetApi } from '../api/client';
 
 export default function DashboardPage({ initialDemoKey = null }) {
@@ -517,6 +519,9 @@ export default function DashboardPage({ initialDemoKey = null }) {
                 </div>
               </div>
 
+              {/* Hybrid AI Stack Architecture Panel */}
+              <AIArchitecturePanel aiStack={analysisResult.aiStack} />
+
               {/* Confidence Meter Component */}
               <ConfidenceMeter 
                 score={analysisResult.confidence?.score}
@@ -532,6 +537,9 @@ export default function DashboardPage({ initialDemoKey = null }) {
                 crossModalReasoning={analysisResult.crossModalReasoning}
                 evidence={analysisResult.evidence}
               />
+
+              {/* RAG Retrieved Knowledge Panel */}
+              <RAGKnowledgePanel ragSources={analysisResult.ragSources} />
 
               {/* Contradiction Detection Component */}
               <ContradictionPanel contradictions={analysisResult.contradictions} />

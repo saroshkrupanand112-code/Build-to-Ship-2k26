@@ -1,0 +1,74 @@
+[
+  {
+    "id": "ds-001",
+    "observation": "High radial vibration on conveyor drive pulley measured at 28 Hz knocking frequency with sheave axial offset",
+    "modality": "acoustic_vibration",
+    "fault_class": "belt_misalignment",
+    "confidence_target": 0.94,
+    "severity": "medium",
+    "telemetry": { "freq_hz": 28.2, "offset_mm": 4.1, "temp_c": 54.0 }
+  },
+  {
+    "id": "ds-002",
+    "observation": "Drive belt lateral whip observed under stroboscopic inspection during motor ramp-up",
+    "modality": "video",
+    "fault_class": "belt_misalignment",
+    "confidence_target": 0.89,
+    "severity": "medium",
+    "telemetry": { "flutter_amplitude_mm": 6.2, "rpm": 1450 }
+  },
+  {
+    "id": "ds-003",
+    "observation": "Infrared thermal camera shows bearing housing at 52 C while PLC PT100 RTD sensor logs 98 C emergency alarm",
+    "modality": "thermal_contradiction",
+    "fault_class": "sensor_calibration_drift",
+    "confidence_target": 0.91,
+    "severity": "high",
+    "telemetry": { "ir_temp_c": 52.3, "rtd_temp_c": 98.1, "delta_t": 45.8 }
+  },
+  {
+    "id": "ds-004",
+    "observation": "Resistance test on PT100 temperature sensor channel reveals corroded terminal terminal contact at 138 ohms",
+    "modality": "electrical_telemetry",
+    "fault_class": "sensor_calibration_drift",
+    "confidence_target": 0.96,
+    "severity": "high",
+    "telemetry": { "resistance_ohms": 138.4, "expected_ohms": 119.4 }
+  },
+  {
+    "id": "ds-005",
+    "observation": "Acoustic high frequency hiss and ultrasonic pinging at 42 kHz on outer bearing race",
+    "modality": "acoustic_ultrasonic",
+    "fault_class": "bearing_failure",
+    "confidence_target": 0.92,
+    "severity": "high",
+    "telemetry": { "ultrasonic_db": 46.5, "peak_cf": 4.8 }
+  },
+  {
+    "id": "ds-006",
+    "observation": "Motor draws 32A on phase A, 24A on phase B, and 25A on phase C during steady loaded operation",
+    "modality": "electrical_power",
+    "fault_class": "electrical_unbalance",
+    "confidence_target": 0.88,
+    "severity": "critical",
+    "telemetry": { "phase_a_amps": 32.1, "phase_b_amps": 24.2, "phase_c_amps": 25.0 }
+  },
+  {
+    "id": "ds-007",
+    "observation": "Lubricant oil sample inspection reveals metallic particulate debris and darkening viscosity",
+    "modality": "physical_inspection",
+    "fault_class": "mechanical_wear",
+    "confidence_target": 0.87,
+    "severity": "medium",
+    "telemetry": { "particle_ppm": 340, "viscosity_cst": 72.1 }
+  },
+  {
+    "id": "ds-008",
+    "observation": "Centrifugal pump discharge flow pulsing with 15 PSI pressure fluctuations and vapor cavity pops",
+    "modality": "acoustic_hydraulic",
+    "fault_class": "cavitation",
+    "confidence_target": 0.93,
+    "severity": "high",
+    "telemetry": { "suction_head_kpa": 12.0, "discharge_psi_delta": 15.2 }
+  }
+]

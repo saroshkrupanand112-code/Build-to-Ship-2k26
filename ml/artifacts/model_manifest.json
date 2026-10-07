@@ -1,0 +1,22 @@
+{
+  "pipeline": "FieldSense Domain Fault Classifier",
+  "base_model": "distilbert-base-uncased",
+  "classes": [
+    "belt_misalignment",
+    "bearing_failure",
+    "sensor_calibration_drift",
+    "electrical_unbalance",
+    "mechanical_wear",
+    "cavitation"
+  ],
+  "id2label": {
+    "0": "belt_misalignment",
+    "1": "bearing_failure",
+    "2": "sensor_calibration_drift",
+    "3": "electrical_unbalance",
+    "4": "mechanical_wear",
+    "5": "cavitation"
+  },
+  "dataset_samples": 8,
+  "status": "configured_for_edge_or_hf_inference_api"
+}

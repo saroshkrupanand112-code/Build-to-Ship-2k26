@@ -37,6 +37,7 @@ export const analyzeIncidentApi = (formData) =>
 
 export const saveInvestigationApi = (data) => API.post('/investigations', data);
 export const getAllInvestigationsApi = () => API.get('/investigations');
+export const getInvestigationsApi = getAllInvestigationsApi;
 export const getInvestigationByIdApi = (id) => API.get(`/investigations/${id}`);
 export const deleteInvestigationApi = (id) => API.delete(`/investigations/${id}`);
 export const getDemoPresetApi = (key) => API.get(`/demos/${key}`);
