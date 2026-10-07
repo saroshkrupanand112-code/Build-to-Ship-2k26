@@ -15,9 +15,11 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import MultimodalFlowDiagram from '../components/MultimodalFlowDiagram';
+import { useAuth } from '../context/AuthContext';
 
 export default function LandingPage({ onLoadDemo }) {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
 
   const handleLaunchDemo = (key) => {
     if (onLoadDemo) onLoadDemo(key);
@@ -25,10 +27,45 @@ export default function LandingPage({ onLoadDemo }) {
   };
 
   return (
-    <div className="space-y-20 pb-20">
+    <div className="space-y-16 pb-20">
       
+      {/* Personalized Welcome Banner for Authenticated User */}
+      {isAuthenticated && user && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-r from-brand-950/80 via-surface-900 to-cyan-950/50 border border-brand-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl animate-fade-in">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-400 to-cyan-400 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-brand-500/30 flex-shrink-0">
+                {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg sm:text-xl font-bold text-white">
+                    Hello, <span className="text-brand-300 font-extrabold">{user.name}</span>!
+                  </h2>
+                  <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    Active Session
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Welcome to FieldSense AI{user.organization ? ` • ${user.organization}` : ''}. Your multimodal workspace is ready.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <Link
+                to="/investigate"
+                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-500 hover:bg-brand-400 text-white flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25 transition-all"
+              >
+                <span>Open Workbench</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
-      <section className="relative pt-12 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center space-y-8">
+      <section className="relative pt-8 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center space-y-8">
         
         {/* Glow pill badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/15 border border-brand-500/40 text-brand-300 text-xs font-mono font-medium shadow-lg shadow-brand-500/10 animate-fade-in">

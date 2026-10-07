@@ -14,15 +14,30 @@ import {
   Info,
   Sliders
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ onNewInvestigation, onLoadDemo, historyCount = 0 }) {
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <aside className="w-64 flex-shrink-0 hidden lg:flex flex-col justify-between p-4 glass-panel border-r border-surface-750/70 bg-surface-950/70 min-h-[calc(100vh-4rem)] sticky top-16">
       
       {/* Navigation Groups */}
       <div className="space-y-6">
+        
+        {/* User Profile Card */}
+        {user && (
+          <div className="p-3 rounded-xl bg-surface-900/90 border border-brand-500/30 flex items-center gap-2.5 shadow-md">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-400 to-cyan-400 flex items-center justify-center text-white font-black text-xs shadow-sm flex-shrink-0">
+              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] text-brand-300 font-mono font-medium leading-none">Hello,</div>
+              <div className="text-xs font-bold text-white truncate mt-0.5">{user.name}</div>
+            </div>
+          </div>
+        )}
         
         {/* Main Actions */}
         <div>

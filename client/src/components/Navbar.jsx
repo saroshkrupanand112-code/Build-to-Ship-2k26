@@ -129,9 +129,16 @@ export default function Navbar({ onLoadDemo }) {
             {/* Auth Button or User Badge */}
             {isAuthenticated && user ? (
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-850 border border-surface-700 text-xs text-slate-200">
-                  <User className="w-3.5 h-3.5 text-brand-400" />
-                  <span className="font-semibold text-white max-w-[90px] truncate">{user.name}</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-850/90 border border-brand-500/30 text-xs text-slate-200 shadow-sm">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-brand-400 to-cyan-500 flex items-center justify-center text-white font-black text-xs shadow-sm">
+                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-[10px] text-brand-300 font-mono font-medium leading-none">Welcome,</span>
+                    <span className="font-bold text-white max-w-[130px] truncate text-xs leading-tight">
+                      {user.name}
+                    </span>
+                  </div>
                 </div>
                 <button
                   onClick={logout}

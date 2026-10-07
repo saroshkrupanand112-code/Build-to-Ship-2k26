@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, Zap, Shield, Brain, Database } from 'lucide-react';
+import { Eye, EyeOff, Zap, Shield, Brain, Database, ArrowRight } from 'lucide-react';
 
-export default function AuthPage() {
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
+export default function AuthPage({ initialMode = 'login' }) {
+  const [mode, setMode] = useState(initialMode); // 'login' | 'register'
   const [form, setForm] = useState({ name: '', email: '', password: '', organization: '' });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,7 +32,8 @@ export default function AuthPage() {
         : await register(form.name, form.email, form.password, form.organization);
 
       if (res.success) {
-        navigate('/investigate');
+        // Redirect to Home page as requested
+        navigate('/');
       } else {
         setError(res.error || 'Authentication failed.');
       }

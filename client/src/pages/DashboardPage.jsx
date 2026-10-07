@@ -27,8 +27,11 @@ import InvestigationReportModal from '../components/InvestigationReportModal';
 import RAGKnowledgePanel from '../components/RAGKnowledgePanel';
 import AIArchitecturePanel from '../components/AIArchitecturePanel';
 import { analyzeIncidentApi, saveInvestigationApi, getDemoPresetApi } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardPage({ initialDemoKey = null }) {
+  const { user } = useAuth();
+
   // Input states
   const [problemDescription, setProblemDescription] = useState('');
   const [imageFile, setImageFile] = useState(null);
@@ -263,8 +266,13 @@ export default function DashboardPage({ initialDemoKey = null }) {
               WORKBENCH
             </span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Combine multiple sources of evidence to investigate an incident. Modalities cross-check each other.
+          <p className="text-xs text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+            {user?.name && (
+              <span className="px-2 py-0.5 rounded bg-surface-800 border border-brand-500/30 text-brand-300 font-mono font-bold text-[11px]">
+                Welcome, {user.name}!
+              </span>
+            )}
+            <span>Combine multiple sources of evidence to investigate an incident. Modalities cross-check each other.</span>
           </p>
         </div>
 
